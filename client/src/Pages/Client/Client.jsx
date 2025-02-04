@@ -1,9 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppContext } from '../../context/ContextProvider';
+import ClientModel from '../../componenents/ClientModel';
 
 function Client() {
 
   const { socket, peerConnection } = useAppContext();
+  const [message, setMessage] = useState("");
+  const [isCalled, setIsCalled] = useState(false);
 
   useEffect(() => {
     if (!peerConnection || !socket) return;
@@ -26,6 +29,13 @@ function Client() {
 
     socket.onmessage = async (event) => {
       const data = JSON.parse(event.data);
+
+      if(data.type === 'manager:inactive') {
+        setMessage('There is no admin available right now. Please try again later.')
+        setTimeout(() => {
+          setIsCalled(false)
+        }, 3000);
+      }
 
       if (data.type === 'call:ready') {
 
@@ -51,16 +61,40 @@ function Client() {
       if (data.type === 'candidate') {
         await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
       }
+
+      if(data.type === 'disconnection:admin') {
+        endCall()
+      }
     };
   }, [peerConnection, socket]);
 
   function startCall() {
     socket.send(JSON.stringify({ type: 'connection:client' }));
+    setIsCalled(true)
+    setMessage("Connecting you to the admin...")
+  }
+
+  function endCall() {
+    setIsCalled(false)
+    socket.send(JSON.stringify({ type: 'disconnection:client' }));
+    peerConnection.getSenders().forEach(sender => peerConnection.removeTrack(sender));
+
+    peerConnection.onicecandidate = null;
+    peerConnection.ontrack = null;
+    peerConnection.onconnectionstatechange = null;
+    peerConnection.oniceconnectionstatechange = null;
+    peerConnection.onsignalingstatechange = null;
+    peerConnection.close()
   }
 
   return (
     <>
       <button onClick={startCall}>Start call</button>
+      <ClientModel
+      message={message}
+      isCalled={isCalled}
+      endCall={endCall}
+      />
     </>
   );
 }

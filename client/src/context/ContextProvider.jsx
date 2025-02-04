@@ -10,7 +10,7 @@ export const AppProvider = ({ children }) => {
   const [peerConnection, setPeerConnection] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:3000");
+    const ws = new WebSocket("ws://localhost:3002");
 
     ws.onopen = () => console.log("WebSocket Connected");
     ws.onclose = () => console.log("WebSocket Disconnected");
